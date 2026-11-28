@@ -1,0 +1,71 @@
+name: profile
+
+on:
+  schedule:
+    - cron: "17 0 * * *" # every day at 05:47 IST
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    paths:
+      - profile.toml
+      - scripts/**
+      - .github/workflows/profile.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: profile
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install font tooling
+        run: pip install fonttools brotli uharfbuzz
+
+      # 1. Static tiles: rebuilt from profile.toml, committed only if they changed
+      - name: Rebuild static tiles
+        run: |
+          python scripts/build.py
+          if [ -n "$(git status --porcelain assets README.md)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add assets README.md
+            git commit -m "Rebuild profile tiles"
+            git push
+          fi
+
+      # 2. Contribution snake, in the tile greys
+      - uses: Platane/snk/svg-only@v3
+        with:
+          github_user_name: ${{ github.repository_owner }}
+          outputs: |
+            dist/snake-light.svg?color_snake=#0d1117&color_dots=#e6eaee,#c6ced6,#98a2ad,#5f6872,#2a3036
+            dist/snake-dark.svg?color_snake=#f0f6fc&color_dots=#21282f,#343c46,#56606b,#8d97a2,#c9d1d9
+
+      # 3. Live stats tiles + the snake framed as a tile
+      - name: Generate stats tiles
+        run: python scripts/stats.py --user "${{ github.repository_owner }}" --out dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 4. Publish everything in dist/ to the "output" branch the README reads from
+      - name: Publish to output branch
+        working-directory: dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git init -q -b output
+          git add -A
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -qm "Update profile stats"
+          git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" output
