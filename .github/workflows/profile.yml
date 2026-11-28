@@ -43,13 +43,13 @@ jobs:
             git push
           fi
 
-      # 2. Contribution snake, in the tile greys
+      # 2. Contribution snake: orange contributions, ink snake
       - uses: Platane/snk/svg-only@v3
         with:
           github_user_name: ${{ github.repository_owner }}
           outputs: |
-            dist/snake-light.svg?color_snake=#0d1117&color_dots=#e6eaee,#c6ced6,#98a2ad,#5f6872,#2a3036
-            dist/snake-dark.svg?color_snake=#f0f6fc&color_dots=#21282f,#343c46,#56606b,#8d97a2,#c9d1d9
+            dist/snake-light.svg?color_snake=#1f2328&color_dots=#e6eaee,#ffd8b5,#fb9a52,#e16f24,#a94400
+            dist/snake-dark.svg?color_snake=#f0f6fc&color_dots=#21282f,#5c2d0e,#a24a14,#e8752d,#ffb070
 
       # 3. Live stats tiles + the snake framed as a tile
       - name: Generate stats tiles

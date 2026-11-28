@@ -9,7 +9,7 @@ import sys
 import tomllib
 from pathlib import Path
 
-from design import PAD_TOP, PAD_X, ROW_W, Canvas, fit_size, measure, write
+from design import PAD_TOP, PAD_X, ROW_W, Canvas, fit_size, measure, mix, write
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -89,7 +89,7 @@ def hero(p: dict, theme: str) -> Canvas:
         for j in range(i + 1):
             w = max(0.0, min(1.0, weights[i][j]))
             c.rect(gx + j * (cell + gap), gy + i * (cell + gap), cell, cell, rx=5,
-                   fill="cell", opacity=0.07 + 0.88 * w)
+                   fill=mix(c.c["ramp"], 0.12 + 0.88 * w))
         cells = "".join(c.parts[before:])
         del c.parts[before:]
         c.add(f'<g class="r" style="animation-delay:{0.35 + i * 0.16:.2f}s">{cells}</g>')

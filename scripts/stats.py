@@ -19,17 +19,18 @@ import tomllib
 import urllib.request
 from pathlib import Path
 
-from design import PAD_TOP, PAD_X, ROW_W, Canvas, fit_size, write
+from design import PAD_TOP, PAD_X, ROW_W, THEMES, Canvas, fit_size, mix, write
 
 ROOT = Path(__file__).resolve().parent.parent
 TILE_W = ROW_W / 3
 TILE_H = 236
 
-# Snake grid colours, per theme: empty cell, then four contribution levels,
-# and the snake itself. Greys only, matching the tiles.
+# Contribution colours come from the shared orange ramp (empty cell, then
+# four levels); the snake uses the tile's ink colour so orange stays the
+# only accent.
 SNAKE = {
-    "dark": dict(ce="#21282f", c=["#21282f", "#343c46", "#56606b", "#8d97a2", "#c9d1d9"], cs="#f0f6fc"),
-    "light": dict(ce="#e6eaee", c=["#e6eaee", "#c6ced6", "#98a2ad", "#5f6872", "#2a3036"], cs="#0d1117"),
+    t: dict(ce=THEMES[t]["ramp"][0], c=THEMES[t]["ramp"], cs=THEMES[t]["ink"])
+    for t in THEMES
 }
 
 
@@ -234,7 +235,7 @@ def streak_tile(s: dict, theme: str) -> Canvas:
         if lv == 0:
             c.rect(x, 142, size, size, rx=3, fill="faint", opacity=0.45)
         else:
-            c.rect(x, 142, size, size, rx=3, fill="cell", opacity=[0, .3, .52, .76, 1][lv])
+            c.rect(x, 142, size, size, rx=3, fill=SNAKE[theme]["c"][lv])
     c.text("Last 14 days", 24, 142 + size + 22, 13, 400, "muted")
     row(c, "Longest", f'{s["longest"]} days', 212)
     return c
@@ -258,8 +259,14 @@ def activity_tile(d: dict, year: int, theme: str) -> Canvas:
 def languages_tile(d: dict, exclude: list[str], theme: str) -> Canvas:
     langs = {k: v for k, v in d["languages"].items() if k not in set(exclude)}
     total = sum(v["size"] for v in langs.values()) or 1
-    top = sorted(langs.items(), key=lambda kv: -kv[1]["size"])[:5]
-    shares = [(k, v["color"], v["size"] / total) for k, v in top]
+    # languages under 1% go into "Other" instead of showing as 0% rows
+    top = [(k, v["size"] / total)
+           for k, v in sorted(langs.items(), key=lambda kv: -kv[1]["size"])
+           if v["size"] / total >= 0.01][:5]
+    # shades of the accent ramp, strongest for the biggest share
+    ramp = THEMES[theme]["ramp"]
+    step = 0.75 / max(len(top) - 1, 1)
+    shares = [(k, mix(ramp, 1 - i * step), p) for i, (k, p) in enumerate(top)]
     title = "Top languages: " + ", ".join(f"{k} {p:.0%}" for k, _, p in shares)
     c = Canvas(TILE_W, TILE_H, theme, title)
     c.frame()
@@ -292,7 +299,7 @@ def languages_tile(d: dict, exclude: list[str], theme: str) -> Canvas:
 
 
 def snake_tile(src: str, theme: str) -> Canvas:
-    """Put the snk animation inside a tile, recoloured to the theme greys."""
+    """Put the snk animation inside a tile, recoloured to the theme palette."""
     m = re.search(r"<svg\b([^>]*)>", src)
     vb = re.search(r'viewBox="([^"]+)"', m.group(1)) if m else None
     vb_vals = [float(v) for v in vb.group(1).split()] if vb else [-16, -32, 880, 192]

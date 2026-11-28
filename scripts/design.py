@@ -29,8 +29,8 @@ PAD_BOTTOM = 2
 RADIUS = 14
 
 # The palette follows GitHub's own canvases so tiles feel native in both
-# themes. Grey does the work; colour only appears where it is data
-# (language share in the stats tiles).
+# themes. Grey does the structure; one orange ramp marks intensity wherever
+# it appears (attention weights, contributions, language share).
 THEMES = {
     "dark": {
         "page": "#0d1117",
@@ -42,6 +42,8 @@ THEMES = {
         "faint": "#3a424d",
         "chip": "#1a2129",
         "cell": "#f0f6fc",
+        # the one accent: an orange intensity ramp, empty -> most
+        "ramp": ["#21282f", "#5c2d0e", "#a24a14", "#e8752d", "#ffb070"],
     },
     "light": {
         "page": "#ffffff",
@@ -53,8 +55,19 @@ THEMES = {
         "faint": "#c9d1d9",
         "chip": "#ffffff",
         "cell": "#1f2328",
+        "ramp": ["#e6eaee", "#ffd8b5", "#fb9a52", "#e16f24", "#a94400"],
     },
 }
+
+
+def mix(stops: list[str], t: float) -> str:
+    """Colour at position t (0..1) along evenly spaced hex stops."""
+    t = max(0.0, min(1.0, t)) * (len(stops) - 1)
+    i = min(int(t), len(stops) - 2)
+    f = t - i
+    a = [int(stops[i][k:k + 2], 16) for k in (1, 3, 5)]
+    b = [int(stops[i + 1][k:k + 2], 16) for k in (1, 3, 5)]
+    return "#" + "".join(f"{round(x + (y - x) * f):02x}" for x, y in zip(a, b))
 
 
 class Face:
